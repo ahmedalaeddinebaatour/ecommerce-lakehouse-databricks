@@ -3,10 +3,9 @@ resources:
     ecommerce_lakehouse_pipeline:
       name: ecommerce_lakehouse_pipeline
 
-      trigger:
-        periodic:
-          interval: 1
-          unit: DAYS
+      schedule:
+        quartz_cron_expression: "0 0 3 * * ?"
+        timezone_id: "UTC"
 
       email_notifications:
         on_failure:
