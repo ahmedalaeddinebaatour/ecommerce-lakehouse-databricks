@@ -152,7 +152,7 @@ ecommerce-lakehouse-databricks/
                          │
                     dim_seller (implicite via seller_id)
 ```
-				---
+				
 
 ## ✅ Data Quality
 
