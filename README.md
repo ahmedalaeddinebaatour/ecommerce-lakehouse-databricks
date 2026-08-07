@@ -31,6 +31,10 @@
 ## 🎯 Vue d'ensemble
 
 Ce projet simule un environnement Data Engineering de production pour une plateforme e-commerce fictive, couvrant l'intégralité du cycle de vie de la donnée :
+```
+Données brutes → Ingestion (Batch + Streaming + CDC) → Nettoyage & Data Quality 
+    → Modélisation métier → Dashboard BI → Orchestration (IaC) → Monitoring
+```
 **Pourquoi ce projet ?** Développé pour maîtriser Databricks de manière pratique et acquérir une expérience directement transférable en entreprise, avec des cas d'usage réalistes — y compris la résolution de trois incidents de production réels (voir [section dédiée](#-incidents-réels--résolutions)).
 
 ---
@@ -216,84 +220,123 @@ resources:
         - task_key: transform_silver
           depends_on: [ingest_bronze]
           ...
-Deux environnements distincts
-Target	Mode	Comportement
-dev	development	Schedule automatiquement mis en pause par Databricks (sécurité anti-exécution accidentelle)
-prod	production	Schedule actif, cron à 3h du matin
-Les deux Jobs coexistent volontairement sur le Workspace — le dev permet de tester une modification du pipeline avant de la déployer en prod, exactement le pattern utilisé en entreprise.
-Commandes de déploiement:
+```
+
+### Deux environnements distincts
+
+| Target | Mode | Comportement |
+|---|---|---|
+| `dev` | `development` | Schedule automatiquement mis en pause par Databricks (sécurité anti-exécution accidentelle) |
+| `prod` | `production` | Schedule actif, cron à 3h du matin |
+
+Les deux Jobs coexistent volontairement sur le Workspace — le `dev` permet de tester une modification du pipeline avant de la déployer en `prod`, exactement le pattern utilisé en entreprise.
+
+### Commandes de déploiement
+
+```bash
 databricks auth login --host <workspace-url>
 databricks bundle validate
 databricks bundle deploy --target dev     # environnement de test
-databricks bundle deploy --target prod    # environnement de production		  
+databricks bundle deploy --target prod    # environnement de production
+```
 
-📊 Dashboard BI
-"E-commerce Lakehouse - Executive Dashboard" publié sur Databricks SQL, avec 4 visualisations :
+---
 
-Visualisation	Type	Insight clé
-Daily Revenue Trends	Line chart	Évolution du CA net sur 731 jours
-Customer Churn Distribution	Donut chart	59% des clients à risque de churn
-Total Lifetime Value by Segment	Bar chart	Concentration de valeur sur le segment HIGH_VALUE (loi de Pareto)
-Revenue by Product Category	Bar chart	Electronics = catégorie dominante (~9M€)
+## 📊 Dashboard BI
 
-🐛 Incidents réels & résolutions
+**"E-commerce Lakehouse - Executive Dashboard"** publié sur Databricks SQL, avec 4 visualisations :
+
+| Visualisation | Type | Insight clé |
+|---|---|---|
+| Daily Revenue Trends | Line chart | Évolution du CA net sur 731 jours |
+| Customer Churn Distribution | Donut chart | 59% des clients à risque de churn |
+| Total Lifetime Value by Segment | Bar chart | Concentration de valeur sur le segment HIGH_VALUE (loi de Pareto) |
+| Revenue by Product Category | Bar chart | Electronics = catégorie dominante (~9M€) |
+
+---
+
+## 🐛 Incidents réels & résolutions
+
 Trois incidents de production ont été rencontrés et résolus durant le développement — chacun a été formateur d'une façon différente.
 
-Incident 1 : conflit Liquid Clustering / partitioning
-Contexte : Après avoir migré gold.fact_sales du partitionnement classique (PARTITION BY) vers le Liquid Clustering (optimisation), le run automatique planifié de la nuit suivante a échoué.
+### Incident 1 : conflit Liquid Clustering / partitioning
 
-Diagnostic : Le notebook source 04_gold_modeling tentait encore de réécrire la table avec l'ancien schéma de partitionnement (.partitionBy("order_year_month")), entrant en conflit avec la nouvelle configuration :
+**Contexte** : Après avoir migré `gold.fact_sales` du partitionnement classique (`PARTITION BY`) vers le **Liquid Clustering** (optimisation), le run automatique planifié de la nuit suivante a échoué.
+
+**Diagnostic** : Le notebook source `04_gold_modeling` tentait encore de réécrire la table avec l'ancien schéma de partitionnement (`.partitionBy("order_year_month")`), entrant en conflit avec la nouvelle configuration :
+```
 DELTA_CLUSTERING_TO_PARTITIONED_TABLE_WITH_NON_EMPTY_CLUSTERING_COLUMNS
-Résolution : Mise à jour du notebook pour être cohérent avec la stratégie d'organisation physique des données.
+```
 
-Leçon : Toute optimisation manuelle appliquée directement sur une table doit être répercutée dans le code source versionné du pipeline.
+**Résolution** : Mise à jour du notebook pour être cohérent avec la stratégie d'organisation physique des données.
 
-Incident 2 : notebooks introuvables après un déplacement de fichiers
-Contexte : En nettoyant le Workspace pour préparer l'export vers GitHub, tous les notebooks ont été déplacés dans un sous-dossier ecommerce_lakehouse_notebooks/. Le run automatique suivant a échoué en 4 secondes.
+**Leçon** : Toute optimisation manuelle appliquée directement sur une table doit être répercutée dans le code source versionné du pipeline.
 
-Diagnostic :
+### Incident 2 : notebooks introuvables après un déplacement de fichiers
+
+**Contexte** : En nettoyant le Workspace pour préparer l'export vers GitHub, tous les notebooks ont été déplacés dans un sous-dossier `ecommerce_lakehouse_notebooks/`. Le run automatique suivant a échoué en 4 secondes.
+
+**Diagnostic** :
+```
 Unable to access the notebook "/Workspace/Users/.../02b_bronze_ingestion" in the workspace.
+```
 Les 4 tâches du Job pointaient encore vers l'ancien chemin, devenu invalide.
 
-Résolution : Mise à jour des 4 chemins dans la configuration des tâches.
+**Résolution** : Mise à jour des 4 chemins dans la configuration des tâches.
 
-Leçon : Tout déplacement de fichiers doit être immédiatement répercuté dans la configuration du Job qui les référence par chemin absolu.
+**Leçon** : Tout déplacement de fichiers doit être immédiatement répercuté dans la configuration du Job qui les référence par chemin absolu.
 
-Incident 3 : trigger périodique au lieu d'un cron précis
-Contexte : Lors de la migration du Job vers un Declarative Automation Bundle, la syntaxe trigger.periodic (interval de 24h) a été utilisée par erreur au lieu de schedule.quartz_cron_expression.
+### Incident 3 : trigger périodique au lieu d'un cron précis
 
-Diagnostic : Aucune erreur — le pipeline fonctionnait, mais s'exécutait à un horaire flottant basé sur le moment du déploiement plutôt qu'à 3h du matin précises, comme documenté et voulu.
+**Contexte** : Lors de la migration du Job vers un Declarative Automation Bundle, la syntaxe `trigger.periodic` (interval de 24h) a été utilisée par erreur au lieu de `schedule.quartz_cron_expression`.
 
-Résolution : Remplacement par schedule.quartz_cron_expression: "0 0 3 * * ?".
+**Diagnostic** : Aucune erreur — le pipeline fonctionnait, mais s'exécutait à un horaire flottant basé sur le moment du déploiement plutôt qu'à 3h du matin précises, comme documenté et voulu.
 
-Leçon : Un incident n'est pas toujours une erreur bloquante — vérifier que le comportement réel correspond bien à l'intention documentée est tout aussi important que de corriger les crashs.
+**Résolution** : Remplacement par `schedule.quartz_cron_expression: "0 0 3 * * ?"`.
 
-🚀 Installation & Setup
-Prérequis
-Compte Databricks Free Edition (gratuit, sans carte bancaire)
-Databricks CLI (pour le déploiement via Bundle)
-Étapes
-Créer un catalogue Unity Catalog ecommerce_lakehouse avec les schémas bronze, silver, gold, monitoring (voir notebooks/00_setup_unity_catalog.py)
-Exécuter les notebooks dans l'ordre numérique (01 → 10)
-Authentifier le CLI : databricks auth login --host <workspace-url>
-Déployer le pipeline : databricks bundle deploy --target prod (depuis le dossier bundle/)
-Publier le Dashboard à partir des requêtes du dossier dashboard_queries/
+**Leçon** : Un incident n'est pas toujours une erreur bloquante — vérifier que le comportement réel correspond bien à l'intention documentée est tout aussi important que de corriger les crashs.
 
-📈 Résultats clés
-~55 000 lignes traitées de bout en bout, tous flux confondus
-0% de duplication après double vérification empirique du comportement Auto Loader
-99.95% de taux de validité des données en Silver (11 rejets sur 20 001)
-~2m30s de temps d'exécution total du pipeline orchestré
-3 incidents de production réels diagnostiqués et résolus de façon autonome
-Infrastructure as Code avec séparation d'environnements dev/prod
+---
 
-🗺️ Roadmap
- Declarative Automation Bundles (Infrastructure as Code)
- Migration vers Lakeflow Declarative Pipelines (ex-DLT) avec AUTO CDC
- MLflow pour un modèle de prédiction de churn
- Lakehouse Monitoring natif pour la détection de dérive de données
- Row-level security via Unity Catalog
- 
- 👤 Auteur
-Ahmed Ala Eddine Baatour
+## 🚀 Installation & Setup
+
+### Prérequis
+- Compte [Databricks Free Edition](https://www.databricks.com/learn/free-edition) (gratuit, sans carte bancaire)
+- [Databricks CLI](https://docs.databricks.com/dev-tools/cli/index.html) (pour le déploiement via Bundle)
+
+### Étapes
+1. Créer un catalogue Unity Catalog `ecommerce_lakehouse` avec les schémas `bronze`, `silver`, `gold`, `monitoring` (voir `notebooks/00_setup_unity_catalog.py`)
+2. Exécuter les notebooks dans l'ordre numérique (01 → 10)
+3. Authentifier le CLI : `databricks auth login --host <workspace-url>`
+4. Déployer le pipeline : `databricks bundle deploy --target prod` (depuis le dossier `bundle/`)
+5. Publier le Dashboard à partir des requêtes du dossier `dashboard_queries/`
+
+---
+
+## 📈 Résultats clés
+
+- **~55 000 lignes** traitées de bout en bout, tous flux confondus
+- **0% de duplication** après double vérification empirique du comportement Auto Loader
+- **99.95% de taux de validité** des données en Silver (11 rejets sur 20 001)
+- **~2m30s** de temps d'exécution total du pipeline orchestré
+- **3 incidents de production réels** diagnostiqués et résolus de façon autonome
+- **Infrastructure as Code** avec séparation d'environnements dev/prod
+
+---
+
+## 🗺️ Roadmap
+
+- [x] Declarative Automation Bundles (Infrastructure as Code)
+- [ ] Migration vers Lakeflow Declarative Pipelines (ex-DLT) avec `AUTO CDC`
+- [ ] MLflow pour un modèle de prédiction de churn
+- [ ] Lakehouse Monitoring natif pour la détection de dérive de données
+- [ ] Row-level security via Unity Catalog
+
+---
+
+## 👤 Auteur
+
+**Ahmed Ala Eddine Baatour**
 Data Engineer — Projet réalisé dans le cadre d'une formation pratique approfondie sur Databricks
+
+---
