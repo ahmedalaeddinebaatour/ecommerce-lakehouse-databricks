@@ -1,0 +1,36 @@
+resources:
+  jobs:
+    ecommerce_lakehouse_pipeline:
+      name: ecommerce_lakehouse_pipeline
+
+      trigger:
+        periodic:
+          interval: 1
+          unit: DAYS
+
+      email_notifications:
+        on_failure:
+          - ahmedalaeddinebaatour@gmail.com
+
+      tasks:
+        - task_key: ingest_bronze
+          notebook_task:
+            notebook_path: /Workspace/Users/ahmedalaeddinebaatour@gmail.com/ecommerce_lakehouse_notebooks/02b_bronze_ingestion
+
+        - task_key: transform_silver
+          depends_on:
+            - task_key: ingest_bronze
+          notebook_task:
+            notebook_path: /Workspace/Users/ahmedalaeddinebaatour@gmail.com/ecommerce_lakehouse_notebooks/03_silver_transformation
+
+        - task_key: build_gold
+          depends_on:
+            - task_key: transform_silver
+          notebook_task:
+            notebook_path: /Workspace/Users/ahmedalaeddinebaatour@gmail.com/ecommerce_lakehouse_notebooks/04_gold_modeling
+
+        - task_key: health_check
+          depends_on:
+            - task_key: build_gold
+          notebook_task:
+            notebook_path: /Workspace/Users/ahmedalaeddinebaatour@gmail.com/ecommerce_lakehouse_notebooks/09_pipeline_health_check
