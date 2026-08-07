@@ -36,47 +36,48 @@ Ce projet simule un environnement Data Engineering de production pour une platef
 ---
 
 ## 🏗️ Architecture
-┌────────────────────────────────────────┐
-                               │              SOURCES DE DONNÉES          │
-                               │  CSV (Faker) | JSON Clickstream | CDC    │
-                               └───────────────────┬──────────────────────┘
-                                                    │
-                 ┌──────────────────────────────────┼──────────────────────────────────┐
-                 ▼                                  ▼                                  ▼
-         (Batch Load)                      (Auto Loader Streaming)             (CDC simulé)
-                 │                                  │                                  │
-                 ▼                                  ▼                                  ▼
-  ╔═══════════════════════════════════════════════════════════════════════════════════════╗
-  ║                                  ZONE BRONZE (RAW)                                       ║
-  ║   bronze.customers | bronze.orders | bronze.order_items                                  ║
-  ║   bronze.clickstream_events (streaming) | bronze.cdc_orders_raw                           ║
-  ║   Colonnes d'audit : _ingest_timestamp, _source_file, _batch_id                            ║
-  ╚═══════════════════════════════════════╦═══════════════════════════════════════════════╝
-                                            │  PySpark : dédoublonnage, Data Quality
-                                            ▼
-  ╔═══════════════════════════════════════════════════════════════════════════════════════╗
-  ║                                  ZONE SILVER (CLEANED)                                   ║
-  ║  silver.customers | silver.orders | silver.order_items                                   ║
-  ║  silver.orders_status_history (SCD Type 2)                                                ║
-  ║  monitoring.orders_quarantine | monitoring.pipeline_audit_log                             ║
-  ╚═══════════════════════════════════════╦═══════════════════════════════════════════════╝
-                                            │  Jointures, agrégations, logique métier
-                                            ▼
-  ╔═══════════════════════════════════════════════════════════════════════════════════════╗
-  ║                                  ZONE GOLD (BUSINESS)                                    ║
-  ║  gold.fact_sales (Liquid Clustering) | gold.agg_daily_revenue | gold.dim_customer         ║
-  ╚═══════════════════════════════════════╦═══════════════════════════════════════════════╝
-                                            │
-                 ┌──────────────────────────┼──────────────────────────┐
-                 ▼                          ▼                          ▼
-          Databricks SQL              monitoring.pipeline_       Unity Catalog
-          Dashboard (Genie)           health_checks              (gouvernance)
+```
+                                   ┌────────────────────────────────────────┐
+                                   │              SOURCES DE DONNÉES          │
+                                   │  CSV (Faker) | JSON Clickstream | CDC    │
+                                   └───────────────────┬──────────────────────┘
+                                                        │
+                     ┌──────────────────────────────────┼──────────────────────────────────┐
+                     ▼                                  ▼                                  ▼
+             (Batch Load)                      (Auto Loader Streaming)             (CDC simulé)
+                     │                                  │                                  │
+                     ▼                                  ▼                                  ▼
+      ╔═══════════════════════════════════════════════════════════════════════════════════════╗
+      ║                                  ZONE BRONZE (RAW)                                       ║
+      ║   bronze.customers | bronze.orders | bronze.order_items                                  ║
+      ║   bronze.clickstream_events (streaming) | bronze.cdc_orders_raw                           ║
+      ║   Colonnes d'audit : _ingest_timestamp, _source_file, _batch_id                            ║
+      ╚═══════════════════════════════════════╦═══════════════════════════════════════════════╝
+                                                │  PySpark : dédoublonnage, Data Quality
+                                                ▼
+      ╔═══════════════════════════════════════════════════════════════════════════════════════╗
+      ║                                  ZONE SILVER (CLEANED)                                   ║
+      ║  silver.customers | silver.orders | silver.order_items                                   ║
+      ║  silver.orders_status_history (SCD Type 2)                                                ║
+      ║  monitoring.orders_quarantine | monitoring.pipeline_audit_log                             ║
+      ╚═══════════════════════════════════════╦═══════════════════════════════════════════════╝
+                                                │  Jointures, agrégations, logique métier
+                                                ▼
+      ╔═══════════════════════════════════════════════════════════════════════════════════════╗
+      ║                                  ZONE GOLD (BUSINESS)                                    ║
+      ║  gold.fact_sales (Liquid Clustering) | gold.agg_daily_revenue | gold.dim_customer         ║
+      ╚═══════════════════════════════════════╦═══════════════════════════════════════════════╝
+                                                │
+                     ┌──────────────────────────┼──────────────────────────┐
+                     ▼                          ▼                          ▼
+              Databricks SQL              monitoring.pipeline_       Unity Catalog
+              Dashboard (Genie)           health_checks              (gouvernance)
 
-  ══════════════════ ORCHESTRATION & GOUVERNANCE (TRANSVERSAL) ══════════════════
-  Unity Catalog (3-level namespace, Volumes, lineage)
-  Declarative Automation Bundles (Infrastructure as Code, targets dev/prod)
-  Databricks Workflows (DAG 4 tâches, retries, schedule quotidien, alerting email)
-  ---
+      ══════════════════ ORCHESTRATION & GOUVERNANCE (TRANSVERSAL) ══════════════════
+      Unity Catalog (3-level namespace, Volumes, lineage)
+      Declarative Automation Bundles (Infrastructure as Code, targets dev/prod)
+      Databricks Workflows (DAG 4 tâches, retries, schedule quotidien, alerting email)
+```
 
 ## 🔧 Stack technique
 
@@ -95,6 +96,7 @@ Ce projet simule un environnement Data Engineering de production pour une platef
 ---
 
 ## 📂 Structure du projet
+```
 ecommerce-lakehouse-databricks/
 ├── README.md
 ├── notebooks/
@@ -115,9 +117,7 @@ ecommerce-lakehouse-databricks/
 │   └── resources/
 │       └── ecommerce_pipeline.job.yml     # Définition du Job en YAML
 └── dashboard_queries/                     # Requêtes SQL du dashboard BI
-> 📝 Note : `01b` et `02b` reflètent des itérations réelles du projet (contournement d'un incident de session Databricks) — conservés tels quels par souci de traçabilité authentique du développement.
-
----
+```
 
 ## 🗃️ Modèle de données
 
@@ -139,14 +139,15 @@ ecommerce-lakehouse-databricks/
 | Gold | `dim_customer` | 5 000 | Dimension client (churn, segments) |
 
 ### Modèle en étoile (Gold)
-dim_customer
-                     │
-                     │
-dim_product ──── fact_sales ──── dim_date (implicite via order_date)
-                     │
-                     │
-                dim_seller (implicite via seller_id)
-				---
+```
+                    dim_customer
+                         │
+                         │
+    dim_product ──── fact_sales ──── dim_date (implicite via order_date)
+                         │
+                         │
+                    dim_seller (implicite via seller_id)
+```				---
 
 ## ✅ Data Quality
 
