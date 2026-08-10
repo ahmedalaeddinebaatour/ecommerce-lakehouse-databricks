@@ -12,22 +12,25 @@
 
 ## 📌 Table des matières
 
-- [Vue d'ensemble](#-vue-densemble)
-- [Architecture](#-architecture)
-- [Stack technique](#-stack-technique)
-- [Structure du projet](#-structure-du-projet)
-- [Modèle de données](#-modèle-de-données)
-- [Data Quality](#-data-quality)
-- [Orchestration & Monitoring](#-orchestration--monitoring)
-- [Infrastructure as Code](#-infrastructure-as-code)
-- [Dashboard BI](#-dashboard-bi)
-- [Incidents réels & résolutions](#-incidents-réels--résolutions)
-- [Installation & Setup](#-installation--setup)
-- [Résultats clés](#-résultats-clés)
-- [Roadmap](#-roadmap)
+- [Vue d'ensemble](#vue-densemble)
+- [Architecture](#architecture)
+- [Stack technique](#stack-technique)
+- [Structure du projet](#structure-du-projet)
+- [Modèle de données](#modele-de-donnees)
+- [Data Quality](#data-quality)
+- [Orchestration & Monitoring](#orchestration--monitoring)
+- [Infrastructure as Code](#infrastructure-as-code)
+- [Lakeflow AUTO CDC](#lakeflow-auto-cdc)
+- [MLflow — Prédiction de Churn](#mlflow--prediction-de-churn)
+- [Dashboard BI](#dashboard-bi)
+- [Incidents réels & résolutions](#incidents-reels--resolutions)
+- [Installation & Setup](#installation--setup)
+- [Résultats clés](#resultats-cles)
+- [Roadmap](#roadmap)
 
 ---
 
+<a name="vue-densemble"></a>
 ## 🎯 Vue d'ensemble
 
 Ce projet simule un environnement Data Engineering de production pour une plateforme e-commerce fictive, couvrant l'intégralité du cycle de vie de la donnée :
@@ -39,6 +42,7 @@ Données brutes → Ingestion (Batch + Streaming + CDC) → Nettoyage & Data Qua
 
 ---
 
+<a name="architecture"></a>
 ## 🏗️ Architecture
 ```
                                    ┌────────────────────────────────────────┐
@@ -83,6 +87,7 @@ Données brutes → Ingestion (Batch + Streaming + CDC) → Nettoyage & Data Qua
       Databricks Workflows (DAG 4 tâches, retries, schedule quotidien, alerting email)
 ```
 
+<a name="stack-technique"></a>
 ## 🔧 Stack technique
 
 | Catégorie | Technologies |
@@ -100,6 +105,7 @@ Données brutes → Ingestion (Batch + Streaming + CDC) → Nettoyage & Data Qua
 
 ---
 
+<a name="structure-du-projet"></a>
 ## 📂 Structure du projet
 
 ```
@@ -130,6 +136,7 @@ ecommerce-lakehouse-databricks/
 └── dashboard_queries/                     # Requêtes SQL du dashboard BI
 ```
 
+<a name="modele-de-donnees"></a>
 ## 🗃️ Modèle de données
 
 ### Tables principales par couche
@@ -161,6 +168,7 @@ ecommerce-lakehouse-databricks/
 ```
 				
 
+<a name="data-quality"></a>
 ## ✅ Data Quality
 
 ### Règles implémentées sur `silver.orders`
@@ -186,6 +194,7 @@ Les lignes invalides ne sont **jamais supprimées silencieusement** — elles so
 
 ---
 
+<a name="orchestration--monitoring"></a>
 ## ⚙️ Orchestration & Monitoring
 
 ### Databricks Workflow : `ecommerce_lakehouse_pipeline`
@@ -209,6 +218,7 @@ Les métriques sont historisées dans `monitoring.pipeline_health_checks` pour s
 
 ---
 
+<a name="infrastructure-as-code"></a>
 ## 🏗️ Infrastructure as Code
 
 Après avoir construit et validé tout le pipeline via l'interface Databricks, le Job a été migré vers **Declarative Automation Bundles** (anciennement Databricks Asset Bundles), pour le rendre déployable en une commande et versionné dans Git plutôt que configuré à la souris.
@@ -250,6 +260,7 @@ databricks bundle deploy --target prod    # environnement de production
 
 ---
 
+<a name="lakeflow-auto-cdc"></a>
 ## 🔄 Lakeflow AUTO CDC
 
 Pour comparer avec l'implémentation manuelle du SCD Type 2 (voir `notebooks/08_cdc_scd2_processing.py`), la même logique a été reproduite avec `AUTO CDC` de Lakeflow Declarative Pipelines — l'approche déclarative moderne recommandée par Databricks.
@@ -284,6 +295,7 @@ dp.create_auto_cdc_flow(
 AUTO CDC utilise directement la valeur du `sequence_by` (ici `change_lsn`) comme borne `__START_AT`/`__END_AT`, plutôt que le timestamp de l'événement source. C'est plus robuste que l'implémentation manuelle : les timestamps sources de ce projet ne sont pas toujours strictement croissants (voir Incident 3 dans la section précédente sur un problème similaire), alors que le LSN, lui, l'est garanti par construction.
 
 
+<a name="mlflow--prediction-de-churn"></a>
 ## 🤖 MLflow — Prédiction de Churn
 
 Un modèle de classification a été entraîné pour prédire le risque de churn (`is_at_risk`) à partir des données de `gold.dim_customer`, avec tracking complet via MLflow et enregistrement dans le Model Registry Unity Catalog.
@@ -325,6 +337,7 @@ with mlflow.start_run(run_name="logistic_regression_baseline"):
 
 Le modèle est enregistré dans Unity Catalog sous `ecommerce_lakehouse.gold.churn_prediction_model`, versionné (`v1`), avec traçabilité complète vers le notebook source.
 
+<a name="dashboard-bi"></a>
 ## 📊 Dashboard BI
 
 **"E-commerce Lakehouse - Executive Dashboard"** publié sur Databricks SQL, avec 4 visualisations :
@@ -338,6 +351,7 @@ Le modèle est enregistré dans Unity Catalog sous `ecommerce_lakehouse.gold.chu
 
 ---
 
+<a name="incidents-reels--resolutions"></a>
 ## 🐛 Incidents réels & résolutions
 
 Trois incidents de production ont été rencontrés et résolus durant le développement — chacun a été formateur d'une façon différente.
@@ -391,6 +405,7 @@ Les 4 tâches du Job pointaient encore vers l'ancien chemin, devenu invalide.
 
 ---
 
+<a name="installation--setup"></a>
 ## 🚀 Installation & Setup
 
 ### Prérequis
@@ -406,6 +421,7 @@ Les 4 tâches du Job pointaient encore vers l'ancien chemin, devenu invalide.
 
 ---
 
+<a name="resultats-cles"></a>
 ## 📈 Résultats clés
 
 - **~55 000 lignes** traitées de bout en bout, tous flux confondus
@@ -417,6 +433,7 @@ Les 4 tâches du Job pointaient encore vers l'ancien chemin, devenu invalide.
 
 ---
 
+<a name="roadmap"></a>
 ## 🗺️ Roadmap
 
 - [x] Declarative Automation Bundles (Infrastructure as Code)
