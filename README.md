@@ -330,7 +330,7 @@ Les 4 tâches du Job pointaient encore vers l'ancien chemin, devenu invalide.
 - **0% de duplication** après double vérification empirique du comportement Auto Loader
 - **99.95% de taux de validité** des données en Silver (11 rejets sur 20 001)
 - **~2m30s** de temps d'exécution total du pipeline orchestré
-- **3 incidents de production réels** diagnostiqués et résolus de façon autonome
+- **4 incidents de production réels** diagnostiqués et résolus de façon autonome
 - **Infrastructure as Code** avec séparation d'environnements dev/prod
 
 ---
