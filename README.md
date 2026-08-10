@@ -278,6 +278,47 @@ dp.create_auto_cdc_flow(
 AUTO CDC utilise directement la valeur du `sequence_by` (ici `change_lsn`) comme borne `__START_AT`/`__END_AT`, plutôt que le timestamp de l'événement source. C'est plus robuste que l'implémentation manuelle : les timestamps sources de ce projet ne sont pas toujours strictement croissants (voir Incident 3 dans la section précédente sur un problème similaire), alors que le LSN, lui, l'est garanti par construction.
 
 
+## 🤖 MLflow — Prédiction de Churn
+
+Un modèle de classification a été entraîné pour prédire le risque de churn (`is_at_risk`) à partir des données de `gold.dim_customer`, avec tracking complet via MLflow et enregistrement dans le Model Registry Unity Catalog.
+
+### Un cas concret de data leakage
+
+La première itération du modèle affichait **100% d'accuracy** — un signal d'alarme plutôt qu'une réussite. En retraçant l'origine des features, la cause est apparue clairement : `days_since_last_order` était utilisée à la fois comme feature d'entraînement et comme base de calcul de la target `churn_status` (`AT_RISK` si `days_since_last_order > 90`). Le modèle n'avait donc rien appris, il retrouvait simplement une règle déjà encodée dans les données.
+
+Après retrait de cette feature, le modèle a produit des métriques réalistes :
+
+| Métrique | Valeur |
+|---|---|
+| Accuracy | 64.4% |
+| Precision | 65.4% |
+| Recall | 87.2% |
+| F1 Score | 74.7% |
+
+Le recall élevé (87%) est volontairement privilégié dans ce contexte métier : le coût de contacter un client par erreur avec une offre de rétention est généralement inférieur au coût de ne pas détecter un vrai client à risque de départ.
+
+### Features utilisées
+
+- `total_orders`
+- `lifetime_value`
+- `customer_segment` (encodé)
+
+### Tracking et Registry
+
+```python
+mlflow.set_experiment("/Users/.../churn_prediction_experiment")
+
+with mlflow.start_run(run_name="logistic_regression_baseline"):
+    model = LogisticRegression(max_iter=1000, random_state=42)
+    model.fit(X_train, y_train)
+
+    mlflow.log_param("features", feature_cols)
+    mlflow.log_metric("accuracy", accuracy)
+    mlflow.sklearn.log_model(model, "model", input_example=X_train.iloc[:5])
+```
+
+Le modèle est enregistré dans Unity Catalog sous `ecommerce_lakehouse.gold.churn_prediction_model`, versionné (`v1`), avec traçabilité complète vers le notebook source.
+
 ## 📊 Dashboard BI
 
 **"E-commerce Lakehouse - Executive Dashboard"** publié sur Databricks SQL, avec 4 visualisations :
@@ -374,7 +415,7 @@ Les 4 tâches du Job pointaient encore vers l'ancien chemin, devenu invalide.
 
 - [x] Declarative Automation Bundles (Infrastructure as Code)
 - [x] Migration vers Lakeflow Declarative Pipelines (ex-DLT) avec `AUTO CDC`
-- [ ] MLflow pour un modèle de prédiction de churn
+- [x] MLflow pour un modèle de prédiction de churn
 - [ ] Lakehouse Monitoring natif pour la détection de dérive de données
 - [ ] Row-level security via Unity Catalog
 
