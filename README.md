@@ -101,7 +101,6 @@ Données brutes → Ingestion (Batch + Streaming + CDC) → Nettoyage & Data Qua
 ---
 
 ## 📂 Structure du projet
-## 📂 Structure du projet
 
 ```
 ecommerce-lakehouse-databricks/
