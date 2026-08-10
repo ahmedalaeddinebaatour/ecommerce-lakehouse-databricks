@@ -52,24 +52,24 @@ Données brutes → Ingestion (Batch + Streaming + CDC) → Nettoyage & Data Qua
                      │                                  │                                  │
                      ▼                                  ▼                                  ▼
       ╔═══════════════════════════════════════════════════════════════════════════════════════╗
-      ║                                  ZONE BRONZE (RAW)                                       ║
-      ║   bronze.customers | bronze.orders | bronze.order_items                                  ║
-      ║   bronze.clickstream_events (streaming) | bronze.cdc_orders_raw                           ║
-      ║   Colonnes d'audit : _ingest_timestamp, _source_file, _batch_id                            ║
+      ║                                  ZONE BRONZE (RAW)                                    ║
+      ║   bronze.customers | bronze.orders | bronze.order_items                               ║
+      ║   bronze.clickstream_events (streaming) | bronze.cdc_orders_raw                       ║
+      ║   Colonnes d'audit : _ingest_timestamp, _source_file, _batch_id                       ║
       ╚═══════════════════════════════════════╦═══════════════════════════════════════════════╝
                                                 │  PySpark : dédoublonnage, Data Quality
                                                 ▼
       ╔═══════════════════════════════════════════════════════════════════════════════════════╗
-      ║                                  ZONE SILVER (CLEANED)                                   ║
-      ║  silver.customers | silver.orders | silver.order_items                                   ║
-      ║  silver.orders_status_history (SCD Type 2)                                                ║
-      ║  monitoring.orders_quarantine | monitoring.pipeline_audit_log                             ║
+      ║                                  ZONE SILVER (CLEANED)                                ║
+      ║  silver.customers | silver.orders | silver.order_items                                ║
+      ║  silver.orders_status_history (SCD Type 2)                                            ║
+      ║  monitoring.orders_quarantine | monitoring.pipeline_audit_log                         ║
       ╚═══════════════════════════════════════╦═══════════════════════════════════════════════╝
                                                 │  Jointures, agrégations, logique métier
                                                 ▼
       ╔═══════════════════════════════════════════════════════════════════════════════════════╗
-      ║                                  ZONE GOLD (BUSINESS)                                    ║
-      ║  gold.fact_sales (Liquid Clustering) | gold.agg_daily_revenue | gold.dim_customer         ║
+      ║                                  ZONE GOLD (BUSINESS)                                 ║
+      ║  gold.fact_sales (Liquid Clustering) | gold.agg_daily_revenue | gold.dim_customer     ║
       ╚═══════════════════════════════════════╦═══════════════════════════════════════════════╝
                                                 │
                      ┌──────────────────────────┼──────────────────────────┐
