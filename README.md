@@ -101,6 +101,8 @@ Données brutes → Ingestion (Batch + Streaming + CDC) → Nettoyage & Data Qua
 ---
 
 ## 📂 Structure du projet
+## 📂 Structure du projet
+
 ```
 ecommerce-lakehouse-databricks/
 ├── README.md
@@ -116,11 +118,16 @@ ecommerce-lakehouse-databricks/
 │   ├── 07_cdc_generation.py              # Simulation d'événements CDC
 │   ├── 08_cdc_scd2_processing.py         # Implémentation SCD Type 2 (MERGE)
 │   ├── 09_pipeline_health_check.py       # Health checks automatisés (quality gate)
-│   └── 10_optimization.py                # Liquid Clustering, VACUUM, benchmarks
+│   ├── 10_optimization.py                # Liquid Clustering, VACUUM, benchmarks
+│   └── 11_mlflow_churn_prediction.py     # Modèle ML de prédiction de churn (MLflow)
 ├── bundle/                                # Infrastructure as Code
 │   ├── databricks.yml                     # Configuration principale, targets dev/prod
 │   └── resources/
 │       └── ecommerce_pipeline.job.yml     # Définition du Job en YAML
+├── lakeflow_pipelines/                    # Lakeflow Declarative Pipelines
+│   └── ecommerce_cdc_autocdc_pipeline/
+│       └── transformations/
+│           └── my_transformation.py       # AUTO CDC (SCD Type 1 et 2)
 └── dashboard_queries/                     # Requêtes SQL du dashboard BI
 ```
 
