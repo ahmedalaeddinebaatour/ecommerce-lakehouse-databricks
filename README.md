@@ -42,9 +42,9 @@ Données brutes → Ingestion (Batch + Streaming + CDC) → Nettoyage & Data Qua
 ## 🏗️ Architecture
 ```
                                    ┌────────────────────────────────────────┐
-                                   │              SOURCES DE DONNÉES          │
-                                   │  CSV (Faker) | JSON Clickstream | CDC    │
-                                   └───────────────────┬──────────────────────┘
+                                   │              SOURCES DE DONNÉES        │
+                                   │  CSV (Faker) | JSON Clickstream | CDC  │
+                                   └───────────────────┬────────────────────┘
                                                         │
                      ┌──────────────────────────────────┼──────────────────────────────────┐
                      ▼                                  ▼                                  ▼
