@@ -297,6 +297,16 @@ Les 4 tâches du Job pointaient encore vers l'ancien chemin, devenu invalide.
 
 **Leçon** : Un incident n'est pas toujours une erreur bloquante — vérifier que le comportement réel correspond bien à l'intention documentée est tout aussi important que de corriger les crashs.
 
+### Incident 4 : dossier de notebooks déplacé à la racine du Workspace
+
+**Contexte** : Trois jours après avoir résolu l'Incident 2, le même symptôme est réapparu : le run automatique a échoué trois nuits de suite avec la même erreur `ResourceNotFound` / notebook introuvable.
+
+**Diagnostic** : Cette fois, la cause était différente. Le dossier `ecommerce_lakehouse_notebooks` s'était retrouvé à la racine du Workspace (`/Workspace/ecommerce_lakehouse_notebooks/`) au lieu de son emplacement habituel dans l'espace utilisateur (`/Workspace/Users/.../ecommerce_lakehouse_notebooks/`), probablement suite à une manipulation lors de la mise en place du Bundle. Le fichier existait bien, mais pas au chemin absolu attendu par le Job — ce qui a d'abord semblé être une répétition de l'Incident 2, avant de vérifier le chemin réel caractère par caractère.
+
+**Résolution** : Déplacement du dossier vers son emplacement correct dans l'espace utilisateur.
+
+**Leçon** : Un même message d'erreur peut avoir des causes racines différentes. Avant de réappliquer une correction déjà connue, il faut vérifier le nouveau contexte plutôt que de supposer que c'est exactement le même problème — ici, comparer le chemin configuré dans le Job avec le chemin réel du fichier, caractère par caractère, a permis d'identifier la vraie cause.
+
 ---
 
 ## 🚀 Installation & Setup
