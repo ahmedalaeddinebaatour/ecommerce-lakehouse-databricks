@@ -90,6 +90,7 @@ Données brutes → Ingestion (Batch + Streaming + CDC) → Nettoyage & Data Qua
 | Plateforme | Databricks Free Edition (Serverless Compute) |
 | Stockage & Format | Delta Lake, Unity Catalog, Volumes |
 | Traitement | PySpark, Spark Structured Streaming, Auto Loader |
+| Lakeflow | Declarative Pipelines, AUTO CDC |
 | Orchestration | Databricks Workflows (Jobs, DAG, Schedules) |
 | Infrastructure as Code | Declarative Automation Bundles, Databricks CLI |
 | BI | Databricks SQL, Genie AI Dashboards |
@@ -243,6 +244,40 @@ databricks bundle deploy --target prod    # environnement de production
 
 ---
 
+## 🔄 Lakeflow AUTO CDC
+
+Pour comparer avec l'implémentation manuelle du SCD Type 2 (voir `notebooks/08_cdc_scd2_processing.py`), la même logique a été reproduite avec `AUTO CDC` de Lakeflow Declarative Pipelines — l'approche déclarative moderne recommandée par Databricks.
+
+### Comparaison des deux approches
+
+| Aspect | Implémentation manuelle | AUTO CDC |
+|---|---|---|
+| Lignes de code | ~60 lignes (boucle + MERGE + sanity check) | ~15 lignes déclaratives |
+| Gestion de l'ordre des événements | `Window` + boucle manuelle sur `event_sequence` | `sequence_by` natif |
+| Résultat final (test sur ORD-0000148) | `delivered`, LSN 1005 | `delivered`, LSN 1005 — identique |
+
+### Code
+
+```python
+dp.create_streaming_table(
+    name="orders_status_history_autocdc",
+    comment="Historique complet des statuts (SCD Type 2)"
+)
+
+dp.create_auto_cdc_flow(
+    target="orders_status_history_autocdc",
+    source="cdc_orders_source",
+    keys=["order_id"],
+    sequence_by=F.col("change_lsn"),
+    stored_as_scd_type=2
+)
+```
+
+### Observation technique
+
+AUTO CDC utilise directement la valeur du `sequence_by` (ici `change_lsn`) comme borne `__START_AT`/`__END_AT`, plutôt que le timestamp de l'événement source. C'est plus robuste que l'implémentation manuelle : les timestamps sources de ce projet ne sont pas toujours strictement croissants (voir Incident 3 dans la section précédente sur un problème similaire), alors que le LSN, lui, l'est garanti par construction.
+
+
 ## 📊 Dashboard BI
 
 **"E-commerce Lakehouse - Executive Dashboard"** publié sur Databricks SQL, avec 4 visualisations :
@@ -338,7 +373,7 @@ Les 4 tâches du Job pointaient encore vers l'ancien chemin, devenu invalide.
 ## 🗺️ Roadmap
 
 - [x] Declarative Automation Bundles (Infrastructure as Code)
-- [ ] Migration vers Lakeflow Declarative Pipelines (ex-DLT) avec `AUTO CDC`
+- [x] Migration vers Lakeflow Declarative Pipelines (ex-DLT) avec `AUTO CDC`
 - [ ] MLflow pour un modèle de prédiction de churn
 - [ ] Lakehouse Monitoring natif pour la détection de dérive de données
 - [ ] Row-level security via Unity Catalog
