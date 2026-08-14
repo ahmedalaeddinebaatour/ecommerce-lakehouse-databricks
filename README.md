@@ -22,6 +22,7 @@
 - [Infrastructure as Code](#infrastructure-as-code)
 - [Lakeflow AUTO CDC](#lakeflow-auto-cdc)
 - [MLflow — Prédiction de Churn](#mlflow--prediction-de-churn)
+- [Lakehouse Monitoring](#lakehouse-monitoring)
 - [Dashboard BI](#dashboard-bi)
 - [Incidents réels & résolutions](#incidents-reels--resolutions)
 - [Installation & Setup](#installation--setup)
@@ -337,6 +338,28 @@ with mlflow.start_run(run_name="logistic_regression_baseline"):
 
 Le modèle est enregistré dans Unity Catalog sous `ecommerce_lakehouse.gold.churn_prediction_model`, versionné (`v1`), avec traçabilité complète vers le notebook source.
 
+<a name="lakehouse-monitoring"></a>
+## 📡 Lakehouse Monitoring (Data Quality Monitoring)
+
+Le monitoring natif de Databricks a été activé sur le schéma `gold`, en complément du système de health check développé manuellement (`09_pipeline_health_check.py`).
+
+### Deux niveaux de surveillance
+
+| Capacité | Portée | Configuration |
+|---|---|---|
+| **Anomaly detection** | Toutes les tables du schéma `gold` | Activation automatique, scan adaptatif de fraîcheur/complétude |
+| **Data profiling** | `gold.fact_sales` spécifiquement | Profil Time Series, granularité 1 jour, colonne `order_date` |
+
+### Dashboard auto-généré
+
+L'activation du Data Profiling génère automatiquement un dashboard Databricks SQL (`fact_sales Monitoring`) avec des visualisations de volume de données et de pourcentage de valeurs nulles dans le temps — sans aucune ligne de code, contrairement au dashboard exécutif construit manuellement.
+
+### Point d'attention : montée en charge progressive
+
+Comme le monitor vient d'être créé, les graphiques temporels n'affichent encore qu'un point de données. Le dashboard s'enrichira automatiquement à chaque exécution nocturne du pipeline, révélant progressivement les tendances réelles.
+
+Un warning a également été identifié : le Change Data Feed (CDF) n'est pas activé sur `fact_sales`, ce qui signifie que chaque refresh du monitor rescanne actuellement la table complète plutôt que de traiter uniquement les nouvelles données — une optimisation possible pour une prochaine itération (`ALTER TABLE ... SET TBLPROPERTIES (delta.enableChangeDataFeed = true)`).
+
 <a name="dashboard-bi"></a>
 ## 📊 Dashboard BI
 
@@ -439,7 +462,7 @@ Les 4 tâches du Job pointaient encore vers l'ancien chemin, devenu invalide.
 - [x] Declarative Automation Bundles (Infrastructure as Code)
 - [x] Migration vers Lakeflow Declarative Pipelines (ex-DLT) avec `AUTO CDC`
 - [x] MLflow pour un modèle de prédiction de churn
-- [ ] Lakehouse Monitoring natif pour la détection de dérive de données
+- [x] Lakehouse Monitoring natif pour la détection de dérive de données
 - [ ] Row-level security via Unity Catalog
 
 ---
